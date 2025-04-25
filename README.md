@@ -1,4 +1,4 @@
 dsls-relational
 ---------------
 
-Encoding DSLs with `FreeT` in Agda
+A template for relational property verification of FreeT-encoded DSLs in Agda.
