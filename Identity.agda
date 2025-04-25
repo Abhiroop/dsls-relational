@@ -1,7 +1,7 @@
 module Identity where
 
-open import Data.Nat using (ℕ; _+_; _*_)
 open import Data.List using (List; _∷_; [])
+open import Data.Nat using (ℕ; _+_; _*_)
 open import Function using (_∘_; id)
 
 open import FreeT
