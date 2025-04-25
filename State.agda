@@ -148,34 +148,50 @@ _>>=_ {A} {B} (freeT x) f = freeT (x >>=State helper)
 _>>_ : ∀ {A B} → FreeT AssemblyF MS A → FreeT AssemblyF MS B → FreeT AssemblyF MS B
 _>>_ fa fb = fa >>= (λ _ → fb)
 
-
-runAssembly : ∀ {A} → FreeT AssemblyF MS A → MS A
-runAssembly (freeT x) = {!!}
-
--- runAssembly : ∀ {A} → FreeT AssemblyF MS A → A
--- runAssembly (freeT x) = runAssembly' x
---   where
---   runAssembly' : ∀ {A} → FreeF AssemblyF MS A → A
---   runAssembly' (pureF x) = x
---   runAssembly' (freeF (Push r k)) =
---     let val = findWithDefault (_=ℕ=_) r 0 regs
---      in runAssembly k (val ∷ stack) regs
---   runAssembly' (freeF (Store r k)) stack regs =
---     let regs' = insert (_=ℕ=_) r (defaultHead 0 stack) regs
---      in runAssembly k (defaultTail stack) regs'
---   runAssembly' (freeF (Ret k)) stack regs =
---     let v = defaultHead 0 stack
---      in runAssembly (k v) stack regs
---   runAssembly' (freeF (Add r₁ r₂ r₃ k)) stack regs =
---     let v₁ = findWithDefault (_=ℕ=_) r₁ 0 regs
---         v₂ = findWithDefault (_=ℕ=_) r₂ 0 regs
---         regs' = insert (_=ℕ=_) r₃ (v₁ + v₂) regs
---      in runAssembly k stack regs'
---   runAssembly' (freeF (Mul r₁ r₂ r₃ k)) stack regs =
---     let v₁ = findWithDefault (_=ℕ=_) r₁ 0 regs
---         v₂ = findWithDefault (_=ℕ=_) r₂ 0 regs
---         regs' = insert (_=ℕ=_) r₃ (v₁ * v₂) regs
---      in runAssembly k stack regs'
+{-# TERMINATING #-}
+runAssembly : ∀ {A} → MachineState → FreeT AssemblyF MS A → MS A
+runAssembly mst (freeT x) = x >>=State (λ comp →  helper mst comp)
+  where
+    helper : ∀ {A} → MachineState → FreeF AssemblyF MS A → MS A
+    helper s₀ (pureF x) = λ _ → x , s₀
+    helper s₀ (freeF (Push r k)) =
+      let stack = proj₁ s₀
+          regs  = proj₂ s₀
+          val = findWithDefault (_=ℕ=_) r 0 regs
+          stack′ = val ∷ stack
+          s₁ : MachineState
+          s₁ = stack′ ,  regs
+       in  runAssembly s₁ k
+    helper s₀ (freeF (Store r k)) =
+      let stack = proj₁ s₀
+          regs  = proj₂ s₀
+          regs′ = insert (_=ℕ=_) r (defaultHead 0 stack) regs
+          stack′ = defaultTail stack
+          s₁ : MachineState
+          s₁ = stack′ ,  regs′
+          in  runAssembly s₁ k
+    helper s₀ (freeF (Ret k)) =
+      let stack = proj₁ s₀
+          v = defaultHead 0 stack
+       in runAssembly s₀ (k v)
+    helper s₀ (freeF (Add r₁ r₂ r₃ k)) =
+      let stack = proj₁ s₀
+          regs  = proj₂ s₀
+          v₁ = findWithDefault (_=ℕ=_) r₁ 0 regs
+          v₂ = findWithDefault (_=ℕ=_) r₂ 0 regs
+          regs′  = insert (_=ℕ=_) r₃ (v₁ + v₂) regs
+          s₁ : MachineState
+          s₁ = stack ,  regs′
+       in runAssembly s₁ k
+    helper s₀ (freeF (Mul r₁ r₂ r₃ k)) =
+      let stack = proj₁ s₀
+          regs  = proj₂ s₀
+          v₁ = findWithDefault (_=ℕ=_) r₁ 0 regs
+          v₂ = findWithDefault (_=ℕ=_) r₂ 0 regs
+          regs′  = insert (_=ℕ=_) r₃ (v₁ * v₂) regs
+          s₁ : MachineState
+          s₁ = stack ,  regs′
+       in runAssembly s₁ k
 
 prog : FreeT AssemblyF MS ℕ
 prog = do
@@ -184,3 +200,6 @@ prog = do
   add 1 2 3
   push 3
   ret
+
+runProg : ℕ
+runProg = evalState (runAssembly machineSt prog) machineSt
