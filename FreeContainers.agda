@@ -57,3 +57,12 @@ open Container public
 data Free {F : Set → Set} (C : Container F) (A : Set) : Set where
   pure : A → Free C A
   impure : Ext (Shape C) (Pos C) (Free C A) → Free C A
+
+record FreeT (F M : Set → Set) (A : Set) : Set₁ where
+  constructor wrap
+  field
+    runFreeT
+      : ∀ {R : Set}
+      → (A → M R)                 -- how to handle a pure “return A” case
+      → (F (M R) → M R)           -- how to handle an “impure” F-layer
+      → M R                        -- yields an M R
